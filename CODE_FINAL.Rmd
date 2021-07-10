@@ -1,0 +1,663 @@
+---
+title: "plot_region"
+author: "JONG"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    fig_width: 14
+    fig_height: 10
+    fig.align : 'center'
+    toc: yes
+    number_sections : yes
+    code_folding: show
+---
+
+<hr>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "png",
+                      dpi = 300,
+                      echo = TRUE,
+                      cache = TRUE,
+                      message=FALSE,
+                      warning=FALSE
+                      )
+```
+
+<style type="text/css">
+.main-container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+# Load package
+```{r}
+library(data.table)
+library(tidyverse)
+library(lubridate)
+library(ggthemes)
+library(ggrepel)
+```
+
+<hr>
+
+<div style="margin-bottom:60px;">
+</div>
+
+# Data import
+```{r}
+ch08 <- fread("chs08_h_v01.txt")
+ch09 <- fread("chs09_h.txt")
+ch10 <- fread("chs10_h_v2.txt")
+ch11 <- fread("chs11_h.txt")
+ch12 <- fread("chs12_h.txt")
+ch13 <- fread("chs13_h.txt")
+ch14 <- fread("chs14_h.txt")
+ch15 <- fread("chs15_h.txt")
+ch16 <- fread("chs16_h.txt")
+ch17 <- fread("chs17_h.txt")
+ch18 <- fread("chs18_h.txt")
+ch19 <- fread("chs19_h.txt")
+```
+
+<hr>
+
+<div style="margin-bottom:60px;">
+</div>
+
+# 고양시 vs 성남시
+
+## Pre-processing {.tabset .tabset-fade .tabset-pills}
+
+### `월간음주율`
+```{r}
+ch08 %>%
+  mutate(year = 2008) %>% 
+  select(year, bogun_cd, sex, age, dra_01z1, drb_01z1, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_01z1 %in% c(3,4,5,6) ~ 1,
+    dra_01z1 == 1 & drb_01z1 %in% c(1,2) ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch08_modify
+
+ch09 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch09_modify
+
+ch10 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch10_modify
+
+ch11 %>%
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>%
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch11_modify
+
+ch12 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch12_modify
+
+ch13 %>%
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>%
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch13_modify
+
+ch14 %>%
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>%
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch14_modify
+
+ch15 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch15_modify
+
+ch16 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch16_modify
+
+ch17 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch17_modify
+
+ch18 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% # drb_04z1, drb_05z1 x
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch18_modify
+
+ch19 %>% 
+  select(year = examin_year, bogun_cd = pbhlth_code, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>%
+  mutate(dr_a0400 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 == 1 ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & drb_01z2 %in% c(2:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  filter(!is.na(dr_a0400)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0400) -> ch19_modify
+
+rbind(ch08_modify, ch09_modify, ch10_modify, ch11_modify, ch12_modify, ch13_modify, ch14_modify, ch15_modify, ch16_modify, ch17_modify, ch18_modify, ch19_modify) -> total_modify
+
+total_modify %<>% 
+  mutate(region = case_when(
+    bogun_cd %in% c(76:78, 31700136, 31700578, 31700535) ~ "Goyang",
+    bogun_cd %in% c(99:101, 31700250, 31700381) ~ "Sungnam",
+    TRUE ~ "Others"
+  )) %>% 
+  filter(region %in% c("Goyang", "Sungnam"))
+```
+
+### `고위험음주율`
+```{r}
+ch08 %>%
+  mutate(year = 2008) %>% 
+  select(year, bogun_cd, sex, age, dra_01z1, drb_01z1, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    drb_01z1 %in% c(2:6) ~ 1,
+    drb_01z1 == 1 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    sex == 1 & drb_01z1 %in% c(5:6) & drb_03z1 %in% c(4:5) ~ 1,
+    sex == 1 & drb_01z1 %in% c(5:6) & drb_03z1 %in% c(1:3) ~ 0,
+    sex == 1 & drb_01z1 %in% c(1:4) ~ 0,
+    sex == 2 & drb_01z1 %in% c(5:6) & drb_03z1 %in% c(3:5) ~ 1,
+    sex == 2 & drb_01z1 %in% c(5:6) & drb_03z1 %in% c(1:2) ~ 0,
+    sex == 2 & drb_01z1 %in% c(1:4) ~ 0,
+  )) %>%
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch08_modify2
+
+ch09 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch09_modify2
+
+ch10 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch10_modify2
+
+ch11 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch11_modify2
+
+ch12 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch12_modify2
+
+ch13 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch13_modify2
+
+ch14 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch14_modify2
+
+ch15 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch15_modify2
+
+ch16 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch16_modify2
+
+ch17 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch17_modify2
+
+ch18 %>% 
+  select(year = josa_year, bogun_cd, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch18_modify2
+
+ch19 %>% 
+  select(year = examin_year, bogun_cd = pbhlth_code, sex, age, dra_01z1, drb_02z1, drb_01z2, drb_03z1, drb_04z1, drb_05z1, mtc_01z1, mta_01z1, mtb_01z1) %>% 
+  mutate(dr_a0300 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 2 ~ 0,
+    dra_01z1 == 2 ~ 0
+  )) %>% 
+  mutate(dr_a0500 = case_when(
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 1 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(4:5) ~ 1,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(1:3) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(1:2) ~ 0,
+    dra_01z1 == 1 & drb_02z1 == 1 & sex == 2 & drb_01z2 %in% c(4:5) & drb_03z1 %in% c(3:5) ~ 1
+  )) %>% 
+  filter(!is.na(dr_a0300)) %>% 
+  filter(!is.na(dr_a0500)) %>% 
+  select(year, bogun_cd, sex, age, dr_a0300, dr_a0500) -> ch19_modify2
+
+rbind(ch08_modify2, ch09_modify2, ch10_modify2, ch11_modify2, ch12_modify2, ch13_modify2, ch14_modify2, ch15_modify2, ch16_modify2, ch17_modify2, ch18_modify2, ch19_modify2) -> total_modify2
+
+total_modify2 %<>% 
+  mutate(region = case_when(
+    bogun_cd %in% c(76:78, 31700136, 31700578, 31700535) ~ "Goyang",
+    bogun_cd %in% c(99:101, 31700250, 31700381) ~ "Sungnam",
+    TRUE ~ "Others"
+  )) %>% 
+  filter(region %in% c("Goyang", "Sungnam"))
+```
+
+<hr>
+
+<div style="margin-bottom:60px;">
+</div>
+
+## Visualization
+
+### 월간음주율 {.tabset .tabset-fade .tabset-pills}
+
+#### `전체`
+```{r}
+total_modify %>% 
+  mutate(year = as.factor(year)) %>% 
+  group_by(region, year) %>% 
+  summarise(Ratio = sum(dr_a0400)/length(dr_a0400) * 100,
+            Ratio = round(Ratio,2)) %>% 
+  ggplot(aes(x = year, y = Ratio, group = region, color = region)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 1.8) +
+  geom_label_repel(aes(label = Ratio), nudge_x = 0.35, size = 4) +
+  labs(title = "월간음주율 비교 (전체)",
+       subtitle = "고양시 vs 성남시") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Accent") +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11, face = "bold"),
+        legend.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"))
+```
+
+#### `성별`
+```{r}
+# New facet label names for sex variable
+sex.labs <- c("Male", "Female")
+names(sex.labs) <- c("1", "2")
+
+total_modify %>% 
+  mutate(year = as.factor(year)) %>% 
+  group_by(region, year, sex) %>% 
+  summarise(Ratio = sum(dr_a0400)/length(dr_a0400) * 100,
+            Ratio = round(Ratio,2)) %>% 
+  ggplot(aes(x = year, y = Ratio, group = region, color = region)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 1.8) +
+  facet_wrap(~ sex, labeller = labeller(sex = sex.labs)) +
+  # geom_label_repel(aes(label = Ratio), nudge_x = 0.35, size = 4) +
+  labs(title = "월간음주율 비교 (성별)",
+       subtitle = "고양시 vs 성남시") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Accent") +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11, face = "bold"),
+        legend.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"),
+        strip.text = element_text(size = 12, face = "bold")) +
+  theme(strip.background = 
+          element_rect(color="gray", fill="gray", size=1.5, linetype="solid"))
+```
+
+#### `연령별`
+```{r}
+total_modify %>% 
+  mutate(year = as.factor(year)) %>% 
+  mutate(age_group = case_when(
+    age <= 29 ~ "20",
+    age >= 30 & age <= 39 ~ "30",
+    age >= 40 & age <= 49 ~ "40",
+    age >= 50 & age <= 59 ~ "50",
+    age >= 60 & age <= 69 ~ "60",
+    age >= 70 ~ "70"
+  )) %>% 
+  group_by(region, year, age_group) %>% 
+  summarise(Ratio = sum(dr_a0400)/length(dr_a0400) * 100,
+            Ratio = round(Ratio,2)) %>% 
+  ggplot(aes(x = year, y = Ratio, group = region, color = region)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 1.8) +
+  facet_wrap(~ age_group) +
+  # geom_label_repel(aes(label = Ratio), nudge_x = 0.35, size = 4) +
+  labs(title = "월간음주율 비교 (연령대별)",
+       subtitle = "고양시 vs 성남시") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Accent") +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11, face = "bold"),
+        legend.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"),
+        strip.text = element_text(size = 12, face = "bold")) +
+  theme(strip.background = 
+          element_rect(color="gray", fill="gray", size=1.5, linetype="solid"))
+```
+
+<hr>
+
+<div style="margin-bottom:60px;">
+</div>
+
+### 고위험음주율 {.tabset .tabset-fade .tabset-pills}
+
+#### `전체`
+```{r}
+total_modify2 %>% 
+  mutate(year = as.factor(year)) %>% 
+  group_by(region, year) %>% 
+  summarise(Ratio = sum(dr_a0500)/length(dr_a0500) * 100,
+            Ratio = round(Ratio,2)) %>% 
+  ggplot(aes(x = year, y = Ratio, group = region, color = region)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 1.8) +
+  geom_label_repel(aes(label = Ratio), nudge_x = 0.35, size = 4) +
+  labs(title = "고위험음주율 비교 (전체)",
+       subtitle = "고양시 vs 성남시") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Accent") +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11, face = "bold"),
+        legend.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"))
+```
+
+#### `성별`
+```{r}
+# New facet label names for sex variable
+sex.labs <- c("Male", "Female")
+names(sex.labs) <- c("1", "2")
+
+total_modify2 %>% 
+  mutate(year = as.factor(year)) %>% 
+  group_by(region, year, sex) %>% 
+  summarise(Ratio = sum(dr_a0500)/length(dr_a0500) * 100,
+            Ratio = round(Ratio,2)) %>% 
+  ggplot(aes(x = year, y = Ratio, group = region, color = region)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 1.8) +
+  facet_wrap(~ sex, labeller = labeller(sex = sex.labs)) +
+  # geom_label_repel(aes(label = Ratio), nudge_x = 0.35, size = 4) +
+  labs(title = "고위험음주율 비교 (성별)",
+       subtitle = "고양시 vs 성남시") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Accent") +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11, face = "bold"),
+        legend.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"),
+        strip.text = element_text(size = 12, face = "bold")) +
+  theme(strip.background = 
+          element_rect(color="gray", fill="gray", size=1.5, linetype="solid"))
+```
+
+#### `연령별`
+```{r}
+total_modify2 %>% 
+  mutate(year = as.factor(year)) %>% 
+  mutate(age_group = case_when(
+    age <= 29 ~ "20",
+    age >= 30 & age <= 39 ~ "30",
+    age >= 40 & age <= 49 ~ "40",
+    age >= 50 & age <= 59 ~ "50",
+    age >= 60 & age <= 69 ~ "60",
+    age >= 70 ~ "70"
+  )) %>% 
+  group_by(region, year, age_group) %>% 
+  summarise(Ratio = sum(dr_a0500)/length(dr_a0500) * 100,
+            Ratio = round(Ratio,2)) %>% 
+  ggplot(aes(x = year, y = Ratio, group = region, color = region)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 1.8) +
+  facet_wrap(~ age_group) +
+  # geom_label_repel(aes(label = Ratio), nudge_x = 0.35, size = 4) +
+  labs(title = "고위험음주율 비교 (연령대별)",
+       subtitle = "고양시 vs 성남시") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Accent") +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11, face = "bold"),
+        legend.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12, face = "bold"),
+        strip.text = element_text(size = 12, face = "bold")) +
+  theme(strip.background = 
+          element_rect(color="gray", fill="gray", size=1.5, linetype="solid"))
+```
+
+<hr>
+
+<div style="margin-bottom:60px;">
+</div>
